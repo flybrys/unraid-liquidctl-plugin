@@ -1,0 +1,171 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+  <!ENTITY name      "liquidctl">
+  <!ENTITY author    "flybrys">
+  <!ENTITY version   "2026.04.25">
+  <!ENTITY launch    "Liquidctl/index">
+  <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
+  <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
+  <!ENTITY support   "https://github.com/flybrys/unraid-liquidctl-plugin/issues">
+]>
+<!--
+  Liquidctl Plugin — Liquid cooler monitoring and control for Unraid
+  https://github.com/flybrys/unraid-liquidctl-plugin
+-->
+<PLUGIN
+  name="&name;"
+  author="&author;"
+  version="&version;"
+  launch="&launch;"
+  pluginURL="&pluginURL;"
+  support="&support;"
+  icon="thermometer-half"
+  min="6.12.0"
+>
+
+<CHANGES>
+###2026.04.25
+- Initial release
+- Real-time monitoring with rolling 10-minute charts
+- Visual fan curve editor (drag points)
+- Pump mode selector for supported devices
+- Self-contained Python venv on USB boot drive (no system Python pollution)
+- Auto-detects device or matches by description substring
+</CHANGES>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- 1. Download source files from GitHub                                   -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+
+<FILE Name="/boot/config/plugins/liquidctl/source/liquidctl-daemon.py" Run="/bin/true">
+<URL>&github;/plugin/liquidctl-daemon.py</URL>
+</FILE>
+
+<FILE Name="/boot/config/plugins/liquidctl/source/rc.liquidctl" Run="/bin/true">
+<URL>&github;/plugin/rc.liquidctl</URL>
+</FILE>
+
+<FILE Name="/boot/config/plugins/liquidctl/source/liquidctl.page" Run="/bin/true">
+<URL>&github;/plugin/liquidctl.page</URL>
+</FILE>
+
+<FILE Name="/boot/config/plugins/liquidctl/source/api.php" Run="/bin/true">
+<URL>&github;/plugin/api.php</URL>
+</FILE>
+
+<FILE Name="/boot/config/plugins/liquidctl/source/index.php" Run="/bin/true">
+<URL>&github;/plugin/index.php</URL>
+</FILE>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- 2. Set up venv (only if not already present)                           -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+
+<FILE Run="/bin/bash">
+<INLINE>
+set -e
+PLUGIN_NAME="liquidctl"
+BOOT_DIR="/boot/config/plugins/$PLUGIN_NAME"
+VENV="$BOOT_DIR/venv"
+INSTALL_LOG="/var/log/${PLUGIN_NAME}-install.log"
+mkdir -p "$BOOT_DIR"
+exec > >(tee -a "$INSTALL_LOG") 2>&amp;1
+
+echo ""
+echo "=========================================="
+echo "  Liquidctl Plugin install — $(date)"
+echo "=========================================="
+
+# Check if venv already exists and is valid (avoids re-running pip on every boot)
+if [ -x "$VENV/bin/liquidctl" ]; then
+  echo "Existing venv found at $VENV — skipping Python install"
+else
+  echo "Creating venv at $VENV (this takes ~1 minute on first install)"
+  python3 -m venv "$VENV"
+
+  # Install all deps into the venv. smbus2 is a pure-Python replacement for smbus
+  # which liquidctl imports on Linux but doesn't actually need for USB devices.
+  PIP="$VENV/bin/pip --quiet --no-cache-dir"
+
+  echo "Upgrading pip..."
+  $PIP install --upgrade pip
+
+  echo "Installing liquidctl + dependencies (binary wheels only where possible)..."
+  $PIP install liquidctl --no-deps
+  $PIP install "crcmod==1.7" docopt libusb1 pyusb colorlog
+  $PIP install pillow --only-binary :all: || echo "  pillow: no binary wheel, skipping (only needed for screen control on supported AIOs)"
+  $PIP install hidapi --only-binary :all: || echo "  hidapi: no binary wheel, falling back to pyusb"
+  $PIP install smbus2
+
+  # Create smbus compatibility shim so liquidctl imports cleanly
+  SITEPKG=$("$VENV/bin/python" -c "import site; print(site.getsitepackages()[0])")
+  if [ ! -f "$SITEPKG/smbus.py" ]; then
+    echo "from smbus2 import SMBus, SMBus as I2CBus" > "$SITEPKG/smbus.py"
+    echo "  smbus shim created"
+  fi
+
+  if "$VENV/bin/python" -c "import liquidctl" 2>/dev/null; then
+    echo "venv set up OK"
+  else
+    echo "ERROR: liquidctl import failed — venv is broken"
+    exit 1
+  fi
+fi
+</INLINE>
+</FILE>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- 3. Deploy runtime files                                                -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+
+<FILE Run="/bin/bash">
+<INLINE>
+set -e
+SRC="/boot/config/plugins/liquidctl/source"
+echo "Deploying runtime files..."
+install -m 755 "$SRC/liquidctl-daemon.py"  /usr/local/bin/liquidctl-daemon.py
+install -m 755 "$SRC/rc.liquidctl"          /usr/local/sbin/rc.liquidctl
+mkdir -p /usr/local/emhttp/plugins/liquidctl
+install -m 644 "$SRC/liquidctl.page"        /usr/local/emhttp/plugins/liquidctl/liquidctl.page
+install -m 644 "$SRC/api.php"               /usr/local/emhttp/plugins/liquidctl/api.php
+install -m 644 "$SRC/index.php"             /usr/local/emhttp/plugins/liquidctl/index.php
+echo "Files deployed"
+</INLINE>
+</FILE>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- 4. Start daemon                                                        -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+
+<FILE Run="/bin/bash">
+<INLINE>
+mkdir -p /var/run/liquidctl
+/usr/local/sbin/rc.liquidctl restart
+echo ""
+echo "=========================================="
+echo "  Liquidctl Plugin install complete"
+echo "  Open Unraid UI → Utilities → Liquidctl"
+echo "=========================================="
+</INLINE>
+</FILE>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- Uninstall hook                                                         -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+echo "Uninstalling Liquidctl Plugin..."
+/usr/local/sbin/rc.liquidctl stop 2>/dev/null || true
+rm -rf /usr/local/emhttp/plugins/liquidctl
+rm -f  /usr/local/bin/liquidctl-daemon.py
+rm -f  /usr/local/sbin/rc.liquidctl
+rm -rf /var/run/liquidctl
+# Settings, venv, and logs in /boot/config/plugins/liquidctl/ are preserved
+# unless the user explicitly removes that directory.
+echo "Liquidctl Plugin uninstalled. Settings preserved in /boot/config/plugins/liquidctl/"
+echo "To remove fully: rm -rf /boot/config/plugins/liquidctl/"
+</INLINE>
+</FILE>
+
+</PLUGIN>
