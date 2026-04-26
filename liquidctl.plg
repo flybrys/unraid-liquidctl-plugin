@@ -2,14 +2,14 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "liquidctl">
   <!ENTITY author    "flybrys">
-  <!ENTITY version   "2026.04.26.2">
+  <!ENTITY version   "2026.04.26.3">
   <!ENTITY launch    "Liquidctl/index">
   <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
   <!ENTITY support   "https://github.com/flybrys/unraid-liquidctl-plugin/issues">
 ]>
 <!--
-  Liquidctl Plugin — Liquid cooler monitoring and control for Unraid
+  Liquidctl Plugin - Liquid cooler monitoring and control for Unraid
   https://github.com/flybrys/unraid-liquidctl-plugin
 -->
 <PLUGIN
@@ -67,11 +67,11 @@ mkdir -p "$BOOT_DIR"
 
 echo ""
 echo "=========================================="
-echo "  Liquidctl Plugin install — $(date)"
+echo "  Liquidctl Plugin install - $(date)"
 echo "=========================================="
 
 if [ -d "$PYLIBS/liquidctl" ]; then
-  echo "Existing python-libs found at $PYLIBS — skipping Python install"
+  echo "Existing python-libs found at $PYLIBS - skipping Python install"
 else
   echo "Installing liquidctl + deps to $PYLIBS (~1 minute on first install)"
   rm -rf "$PYLIBS"
@@ -122,7 +122,7 @@ mkdir -p /var/run/liquidctl
 /usr/local/sbin/rc.liquidctl restart
 echo ""
 echo "=========================================="
-echo "  Install complete — Utilities → Liquidctl"
+echo "  Install complete - Utilities -> Liquidctl"
 echo "=========================================="
 </INLINE>
 </FILE>
