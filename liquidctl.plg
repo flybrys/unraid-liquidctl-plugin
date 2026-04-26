@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "liquidctl">
   <!ENTITY author    "flybrys">
-  <!ENTITY version   "2026.04.26.10">
+  <!ENTITY version   "2026.04.26.11">
   <!ENTITY launch    "Tools/Liquidctl">
   <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
@@ -42,7 +42,7 @@
 <URL>&github;/plugin/rc.liquidctl?v=&version;</URL>
 </FILE>
 
-<FILE Name="/boot/config/plugins/liquidctl/source/liquidctl.page" Run="/bin/true">
+<FILE Name="/boot/config/plugins/liquidctl/source/liquidctl.page.dl" Run="/bin/true">
 <URL>&github;/plugin/liquidctl.page?v=&version;</URL>
 </FILE>
 
@@ -103,7 +103,7 @@ echo "Deploying runtime files..."
 install -m 755 "$SRC/liquidctl-daemon.py"  /usr/local/bin/liquidctl-daemon.py
 install -m 755 "$SRC/rc.liquidctl"          /usr/local/sbin/rc.liquidctl
 mkdir -p /usr/local/emhttp/plugins/liquidctl
-install -m 644 "$SRC/liquidctl.page"        /usr/local/emhttp/plugins/liquidctl/liquidctl.page
+install -m 644 "$SRC/liquidctl.page.dl"     /usr/local/emhttp/plugins/liquidctl/liquidctl.page
 install -m 644 "$SRC/api.php"               /usr/local/emhttp/plugins/liquidctl/api.php
 echo "Files deployed"
 </INLINE>
