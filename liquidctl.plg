@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "liquidctl">
   <!ENTITY author    "flybrys">
-  <!ENTITY version   "2026.04.26.4">
-  <!ENTITY launch    "Liquidctl/index">
+  <!ENTITY version   "2026.04.26.6">
+  <!ENTITY launch    "Tools/Liquidctl">
   <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
   <!ENTITY support   "https://github.com/flybrys/unraid-liquidctl-plugin/issues">
@@ -48,10 +48,6 @@
 
 <FILE Name="/boot/config/plugins/liquidctl/source/api.php" Run="/bin/true">
 <URL>&github;/plugin/api.php</URL>
-</FILE>
-
-<FILE Name="/boot/config/plugins/liquidctl/source/index.php" Run="/bin/true">
-<URL>&github;/plugin/index.php</URL>
 </FILE>
 
 <!-- 2. Install Python dependencies (pip with target dir) -->
@@ -109,7 +105,6 @@ install -m 755 "$SRC/rc.liquidctl"          /usr/local/sbin/rc.liquidctl
 mkdir -p /usr/local/emhttp/plugins/liquidctl
 install -m 644 "$SRC/liquidctl.page"        /usr/local/emhttp/plugins/liquidctl/liquidctl.page
 install -m 644 "$SRC/api.php"               /usr/local/emhttp/plugins/liquidctl/api.php
-install -m 644 "$SRC/index.php"             /usr/local/emhttp/plugins/liquidctl/index.php
 echo "Files deployed"
 </INLINE>
 </FILE>
