@@ -160,10 +160,11 @@ def apply_pump_mode(force: bool = False):
         return
     if not force and mode == S.last_pump_mode:
         return
-    log.info("Setting pump mode → %s", mode)
+    log.info("Setting pump mode -> %s", mode)
     out = lctl("initialize", f"--pump-mode={mode}")
-    if out:
-        S.last_pump_mode = mode
+    # Always record the attempt so we don't spam on every poll cycle.
+    # If liquidctl errored (e.g. ambiguous device), the warning was already logged.
+    S.last_pump_mode = mode
 
 
 # ── Fan control ───────────────────────────────────────────────────────────────
@@ -178,7 +179,7 @@ def apply_controls(temp: float):
         if prev < 0 or abs(target - prev) > hyst:
             lctl("set", channel, "speed", str(target))
             S.last_duty[key] = target
-            log.debug("  %-10s → %3d%%", key, target)
+            log.debug("  %-10s -> %3d%%", key, target)
 
     maybe_set("fan1", s["fan1_channel"], lerp_curve(s["fan1_curve"], temp))
     maybe_set("fan2", s["fan2_channel"], lerp_curve(s["fan2_curve"], temp))
