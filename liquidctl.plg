@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "liquidctl">
   <!ENTITY author    "flybrys">
-  <!ENTITY version   "2026.04.26.1">
+  <!ENTITY version   "2026.04.26.2">
   <!ENTITY launch    "Liquidctl/index">
   <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
@@ -54,7 +54,7 @@
 <URL>&github;/plugin/index.php</URL>
 </FILE>
 
-<!-- 2. Install Python dependencies via pip --target -->
+<!-- 2. Install Python dependencies (pip with target dir) -->
 
 <FILE Run="/bin/bash">
 <INLINE>
