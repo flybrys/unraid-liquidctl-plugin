@@ -4,7 +4,7 @@
 
 PLUGIN_NAME="liquidctl"
 DAEMON_PY="/usr/local/bin/${PLUGIN_NAME}-daemon.py"
-VENV_PY="/boot/config/plugins/${PLUGIN_NAME}/venv/bin/python"
+PYLIBS="/boot/config/plugins/${PLUGIN_NAME}/python-libs"
 PID_FILE="/var/run/${PLUGIN_NAME}/daemon.pid"
 LOG_FILE="/var/log/${PLUGIN_NAME}.log"
 
@@ -18,13 +18,13 @@ start)
         echo "${PLUGIN_NAME} already running (PID $(cat "$PID_FILE"))"
         exit 0
     fi
-    if [ ! -x "$VENV_PY" ]; then
-        echo "ERROR: venv Python not found at $VENV_PY"
+    if [ ! -d "$PYLIBS/liquidctl" ]; then
+        echo "ERROR: python-libs not found at $PYLIBS"
         echo "Plugin install may have failed — check /var/log/${PLUGIN_NAME}-install.log"
         exit 1
     fi
     mkdir -p /var/run/${PLUGIN_NAME}
-    "$VENV_PY" "$DAEMON_PY" >> "$LOG_FILE" 2>&1 &
+    python3 "$DAEMON_PY" >> "$LOG_FILE" 2>&1 &
     sleep 1
     if running; then
         echo "${PLUGIN_NAME} started (PID $(cat "$PID_FILE"))"

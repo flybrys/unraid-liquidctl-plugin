@@ -20,7 +20,7 @@ STATUS_FILE   = f"{RUN_DIR}/status.json"
 SETTINGS_FILE = f"{BOOT_DIR}/settings.json"
 PID_FILE      = f"{RUN_DIR}/daemon.pid"
 LOG_FILE      = f"/var/log/{PLUGIN_NAME}.log"
-VENV_LCTL     = f"{BOOT_DIR}/venv/bin/liquidctl"
+PYLIBS        = f"{BOOT_DIR}/python-libs"
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 POLL_SECS    = 2
@@ -94,15 +94,19 @@ def save_default_settings():
 
 # ── liquidctl wrapper (uses venv binary) ──────────────────────────────────────
 def lctl(*args):
-    """Run liquidctl from the plugin's venv, scoped to the configured device."""
-    cmd = [VENV_LCTL]
+    """Run liquidctl as a Python module with PYTHONPATH set to our pip --target dir."""
+    cmd = ["python3", "-m", "liquidctl"]
     match = S.settings.get("device_match", "")
     if match:
         cmd += ["--match", match]
     cmd += list(args)
 
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = PYLIBS + (":" + existing if existing else "")
+
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, env=env)
         if r.returncode != 0 and r.stderr:
             log.warning("liquidctl stderr: %s", r.stderr.strip())
         return r.stdout
@@ -110,7 +114,7 @@ def lctl(*args):
         log.error("liquidctl timed out")
         return ""
     except FileNotFoundError:
-        log.error("liquidctl not found at %s — is the venv set up?", VENV_LCTL)
+        log.error("python3 not found — system Python missing?")
         return ""
     except Exception as e:
         log.error("liquidctl error: %s", e)

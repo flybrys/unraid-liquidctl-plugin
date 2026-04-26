@@ -16,7 +16,7 @@ define('SETTINGS_FILE', '/boot/config/plugins/' . PLUGIN_NAME . '/settings.json'
 define('PID_FILE',      '/var/run/' . PLUGIN_NAME . '/daemon.pid');
 define('LOG_FILE',      '/var/log/' . PLUGIN_NAME . '.log');
 define('RC_SCRIPT',     '/usr/local/sbin/rc.' . PLUGIN_NAME);
-define('VENV_LCTL',     '/boot/config/plugins/' . PLUGIN_NAME . '/venv/bin/liquidctl');
+define('PYLIBS',        '/boot/config/plugins/' . PLUGIN_NAME . '/python-libs');
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
@@ -112,11 +112,12 @@ switch ($action) {
 
     case 'devices':
         // Probe what liquidctl can see
-        if (!file_exists(VENV_LCTL)) {
+        if (!is_dir(PYLIBS . '/liquidctl')) {
             json_out(['error' => 'liquidctl not installed']);
             break;
         }
-        $out = shell_exec(escapeshellarg(VENV_LCTL) . ' list 2>&1');
+        $cmd = 'PYTHONPATH=' . escapeshellarg(PYLIBS) . ' python3 -m liquidctl list 2>&1';
+        $out = shell_exec($cmd);
         $devices = [];
         foreach (explode("\n", $out ?? '') as $line) {
             if (preg_match('/^Device #(\d+):\s*(.+)$/', trim($line), $m)) {
