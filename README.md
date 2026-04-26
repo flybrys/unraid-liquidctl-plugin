@@ -10,7 +10,7 @@ A native Unraid plugin for liquid cooler monitoring and control, powered by [liq
 - **Visual fan curve editor** — drag-point editor with hysteresis to prevent fan hunting
 - **Pump mode control** — switch between Quiet / Balanced / Extreme on supported devices
 - **10-minute rolling charts** — temperature and speed history at a glance
-- **Self-contained** — Python virtualenv lives entirely on the USB boot drive, nothing installed into Unraid's system Python
+- **Self-contained** — Python deps live entirely on the USB boot drive, nothing installed into Unraid's system Python
 - **Clean uninstall** — removing the plugin removes everything
 
 ## Requirements
@@ -35,7 +35,7 @@ A native Unraid plugin for liquid cooler monitoring and control, powered by [liq
    ```
 3. Open the Unraid web UI → Utilities → **Liquidctl**
 
-First install takes ~1 minute as it sets up a Python venv on the USB boot drive. Subsequent reboots are fast — the venv persists.
+First install takes ~1 minute as it downloads liquidctl and dependencies. Subsequent reboots are fast — everything is cached on the USB boot drive.
 
 ## Configuration
 
@@ -57,7 +57,7 @@ The H100i Elite RGB exposes pump speed control via `liquidctl initialize --pump-
 
 Plugin → Liquidctl → Remove.
 
-This removes the plugin and stops the daemon. Settings, logs, and the Python venv at `/boot/config/plugins/liquidctl/` are preserved by default — to remove those too:
+This removes the plugin and stops the daemon. Settings, logs, and the Python libraries at `/boot/config/plugins/liquidctl/` are preserved by default — to remove those too:
 
 ```
 rm -rf /boot/config/plugins/liquidctl/
@@ -75,7 +75,7 @@ rm -rf /boot/config/plugins/liquidctl/
 │   ├── liquidctl.page
 │   ├── api.php
 │   └── index.php
-└── venv/                    # Python virtualenv with liquidctl + deps
+└── python-libs/             # liquidctl + deps (pip install --target)
 
 /usr/local/bin/liquidctl-daemon.py     # deployed daemon
 /usr/local/sbin/rc.liquidctl            # service script
@@ -90,7 +90,7 @@ rm -rf /boot/config/plugins/liquidctl/
 └── liquidctl-install.log    # install log (debugging)
 ```
 
-The daemon runs from the venv's Python so it has access to liquidctl. It polls every 2 seconds, applies fan curves with hysteresis, and writes status to a JSON file that the web UI reads. Settings changes via the UI trigger a SIGHUP for in-place reload — no daemon restart needed.
+The daemon runs with system Python and adds `python-libs/` to PYTHONPATH so it can import liquidctl. It polls every 2 seconds, applies fan curves with hysteresis, and writes status to a JSON file that the web UI reads. Settings changes via the UI trigger a SIGHUP for in-place reload — no daemon restart needed.
 
 ## Contributing
 
