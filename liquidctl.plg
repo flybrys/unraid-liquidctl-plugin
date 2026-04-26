@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
   <!ENTITY name      "liquidctl">
   <!ENTITY author    "flybrys">
-  <!ENTITY version   "2026.04.26.3">
+  <!ENTITY version   "2026.04.26.4">
   <!ENTITY launch    "Liquidctl/index">
   <!ENTITY github    "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main">
   <!ENTITY pluginURL "https://raw.githubusercontent.com/flybrys/unraid-liquidctl-plugin/main/liquidctl.plg">
@@ -77,12 +77,12 @@ else
   rm -rf "$PYLIBS"
   mkdir -p "$PYLIBS"
 
-  PIP="pip3 --quiet --no-cache-dir --target=$PYLIBS"
+  PIP_INSTALL="pip3 install --quiet --no-cache-dir --target=$PYLIBS"
 
-  $PIP install liquidctl --no-deps
-  $PIP install "crcmod==1.7" docopt libusb1 pyusb colorlog smbus2
-  $PIP install pillow --only-binary :all: 2>/dev/null || echo "  pillow: skipped (no binary wheel)"
-  $PIP install hidapi --only-binary :all: 2>/dev/null || echo "  hidapi: skipped (no binary wheel)"
+  $PIP_INSTALL liquidctl --no-deps
+  $PIP_INSTALL "crcmod==1.7" docopt libusb1 pyusb colorlog smbus2
+  $PIP_INSTALL pillow --only-binary :all: 2>/dev/null || echo "  pillow: skipped (no binary wheel)"
+  $PIP_INSTALL hidapi --only-binary :all: 2>/dev/null || echo "  hidapi: skipped (no binary wheel)"
 
   echo "from smbus2 import SMBus, SMBus as I2CBus" > "$PYLIBS/smbus.py"
   echo "  smbus shim created"
