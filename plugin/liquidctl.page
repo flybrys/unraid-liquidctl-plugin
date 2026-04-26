@@ -457,7 +457,7 @@ canvas.curve-canvas {
    ---- */
 
 const CSRF = "<?=$var['csrf_token'] ?? ''?>";
-const API = 'api.php' + (CSRF ? ('?csrf_token=' + encodeURIComponent(CSRF)) : '');
+const API = '/plugins/liquidctl/api.php' + (CSRF ? ('?csrf_token=' + encodeURIComponent(CSRF)) : '');
 
 // ---- Chart.js setup ----
 Chart.defaults.color = '#454d62';
