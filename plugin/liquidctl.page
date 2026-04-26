@@ -456,7 +456,8 @@ canvas.curve-canvas {
    cerebro-aio dashboard JS
    ---- */
 
-const API = 'api.php';
+const CSRF = "<?=$var['csrf_token'] ?? ''?>";
+const API = 'api.php' + (CSRF ? ('?csrf_token=' + encodeURIComponent(CSRF)) : '');
 
 // ---- Chart.js setup ----
 Chart.defaults.color = '#454d62';
@@ -832,7 +833,7 @@ function onSyncChange() {
 // ---- Settings save ----
 async function saveSettings(settings) {
   try {
-    const r = await fetch(`${API}?action=settings`, {
+    const r = await fetch(`${API}&action=settings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
@@ -861,7 +862,7 @@ async function saveCurve(n) {
 // ---- Daemon control ----
 async function restartDaemon() {
   toast('Restarting daemon...', '');
-  await fetch(`${API}?action=service`, {
+  await fetch(`${API}&action=service`, {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({cmd:'restart'})
   });
@@ -872,7 +873,7 @@ async function restartDaemon() {
 async function fetchLog() {
   const box = document.getElementById('logBox');
   try {
-    const r = await fetch(`${API}?action=log&lines=80`);
+    const r = await fetch(`${API}&action=log&lines=80`);
     const j = await r.json();
     box.innerHTML = (j.lines || []).map(l => {
       const cls = l.includes(' ERROR ') ? 'll-error' :
@@ -905,7 +906,7 @@ let _settingsLoaded = false;
 
 async function poll() {
   try {
-    const r = await fetch(`${API}?action=status`);
+    const r = await fetch(`${API}&action=status`);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const s = await r.json();
     if (s.error) throw new Error(s.error);
@@ -933,7 +934,7 @@ async function poll() {
 async function init() {
   // Load settings once to init curve editors and pump mode
   try {
-    const r = await fetch(`${API}?action=settings`);
+    const r = await fetch(`${API}&action=settings`);
     currentSettings = await r.json();
     _settingsLoaded  = true;
     highlightPumpMode(currentSettings.pump_mode);
@@ -944,7 +945,7 @@ async function init() {
 
   // Populate device name in header
   try {
-    const dr = await fetch(`${API}?action=devices`);
+    const dr = await fetch(`${API}&action=devices`);
     const dj = await dr.json();
     if (dj.devices && dj.devices.length) {
       const names = dj.devices.map(d => d.name).join(' . ');
