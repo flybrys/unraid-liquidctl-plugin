@@ -59,8 +59,12 @@ switch ($action) {
     case 'settings':
         global $DEFAULTS;
         if ($method === 'POST') {
+            // Accept JSON body OR form-encoded with 'data' field containing JSON
             $raw  = file_get_contents('php://input');
             $data = json_decode($raw, true);
+            if (!is_array($data) && isset($_POST['data'])) {
+                $data = json_decode($_POST['data'], true);
+            }
             if (!is_array($data)) {
                 http_response_code(400);
                 json_out(['error' => 'Invalid JSON body']);
@@ -90,6 +94,9 @@ switch ($action) {
     case 'service':
         if ($method !== 'POST') { http_response_code(405); break; }
         $body = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($body) && isset($_POST['data'])) {
+            $body = json_decode($_POST['data'], true);
+        }
         $cmd  = $body['cmd'] ?? '';
         if (!in_array($cmd, ['start', 'stop', 'restart', 'reload'], true)) {
             http_response_code(400);

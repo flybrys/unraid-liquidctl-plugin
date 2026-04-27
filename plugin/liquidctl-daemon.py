@@ -221,6 +221,52 @@ def on_sighup(sig, frame):
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+def auto_detect_device():
+    """If device_match is empty and multiple devices exist, pick the first AIO-like one."""
+    if S.settings.get("device_match"):
+        return  # user has configured a match
+
+    cmd = ["python3", "-m", "liquidctl", "list"]
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = PYLIBS + (":" + existing if existing else "")
+
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=6, env=env)
+        lines = [l for l in r.stdout.splitlines() if l.startswith("Device #")]
+    except Exception as e:
+        log.warning("Auto-detect failed: %s", e)
+        return
+
+    log.info("Auto-detect found %d device(s)", len(lines))
+    for line in lines:
+        log.info("  %s", line)
+
+    if len(lines) <= 1:
+        return  # no need to filter
+
+    # Multiple devices - prefer one that looks like an AIO cooler
+    aio_keywords = ["H100i", "H115i", "H150i", "H170i", "Capellix", "Elite",
+                    "PRO XT", "Platinum", "Kraken", "Liquid Freezer",
+                    "MasterLiquid", "Galahad", "LCD"]
+    for line in lines:
+        # "Device #0: Corsair iCUE H100i Elite RGB"
+        desc = line.split(":", 1)[-1].strip()
+        for kw in aio_keywords:
+            if kw.lower() in desc.lower():
+                S.settings["device_match"] = kw
+                log.info("Auto-detected AIO: %r (matching on %r)", desc, kw)
+                try:
+                    with open(SETTINGS_FILE, "w") as f:
+                        json.dump(S.settings, f, indent=2)
+                except Exception as e:
+                    log.warning("Could not persist device_match: %s", e)
+                return
+
+    log.warning("Multiple devices but none match known AIO patterns. "
+                "Set 'device_match' manually in %s", SETTINGS_FILE)
+
+
 def main():
     os.makedirs(os.path.dirname(PID_FILE), exist_ok=True)
     with open(PID_FILE, "w") as f:
@@ -229,6 +275,9 @@ def main():
     log.info("Liquidctl Plugin daemon starting  PID=%d", os.getpid())
     load_settings()
     signal.signal(signal.SIGHUP, on_sighup)
+
+    # Auto-detect device if not configured
+    auto_detect_device()
 
     # Initialize device, then apply pump mode
     out = lctl("initialize")

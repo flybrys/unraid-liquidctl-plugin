@@ -538,6 +538,12 @@ function updateGauges(s) {
   const t = s.liquid_temp ?? null;
 
   if (t !== null) {
+    window.currentLiquidTemp = t;
+    // Re-render curve editors so the temp indicator updates
+    if (window.editors) {
+      if (editors[1]) editors[1].render();
+      if (editors[2]) editors[2].render();
+    }
     document.getElementById('gTemp').textContent   = t.toFixed(1);
     document.getElementById('gTempState').textContent = tempLabel(t);
     document.getElementById('gTempBar').style.cssText =
@@ -771,6 +777,61 @@ class CurveEditor {
     ctx.stroke();
     ctx.shadowBlur = 0;
 
+    // Current temperature indicator (vertical line at current liquid temp)
+    if (typeof window.currentLiquidTemp === 'number') {
+      const t = window.currentLiquidTemp;
+      if (t >= this.tMin && t <= this.tMax) {
+        const {x: tx} = this._tc(t, 0);
+        // Vertical line
+        ctx.save();
+        ctx.strokeStyle = '#ff7043';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(tx, pt);
+        ctx.lineTo(tx, H - pb);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Find the duty at this temperature from the curve
+        const sortedC = [...this.curve].sort((a,b) => a[0]-b[0]);
+        const targetDuty = (() => {
+          if (t <= sortedC[0][0]) return sortedC[0][1];
+          if (t >= sortedC[sortedC.length-1][0]) return sortedC[sortedC.length-1][1];
+          for (let i = 0; i < sortedC.length - 1; i++) {
+            const [t0, d0] = sortedC[i], [t1, d1] = sortedC[i+1];
+            if (t0 <= t && t <= t1) {
+              return d0 + (d1 - d0) * (t - t0) / (t1 - t0);
+            }
+          }
+          return sortedC[sortedC.length-1][1];
+        })();
+
+        // Highlight dot at intersection
+        const {x: ix, y: iy} = this._tc(t, targetDuty);
+        ctx.beginPath();
+        ctx.arc(ix, iy, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#ff7043';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Label
+        const labelTxt = `${t.toFixed(1)}deg -> ${Math.round(targetDuty)}%`;
+        ctx.font = `9px 'Share Tech Mono', monospace`;
+        const tw = ctx.measureText(labelTxt).width;
+        const lblX = Math.min(Math.max(tx, pl + tw/2 + 4), W - pr - tw/2 - 4);
+        const lblY = pt + 12;
+        ctx.fillStyle = 'rgba(255,112,67,.95)';
+        ctx.fillRect(lblX - tw/2 - 3, lblY - 9, tw + 6, 12);
+        ctx.fillStyle = '#08090d';
+        ctx.textAlign = 'center';
+        ctx.fillText(labelTxt, lblX, lblY);
+        ctx.restore();
+      }
+    }
+
     // Drag points
     this.curve.forEach(([t,d]) => {
       const {x,y} = this._tc(t,d);
@@ -796,7 +857,7 @@ class CurveEditor {
 }
 
 // ---- Curve editor instances ----
-let editors = {};
+let editors = window.editors = {};
 let deleteModes = { 1: false, 2: false };
 
 function initEditors(settings) {
@@ -833,13 +894,24 @@ function onSyncChange() {
 // ---- Settings save ----
 async function saveSettings(settings) {
   try {
+    // Form-encode the body so Unraid CSRF middleware can validate
+    const body = new URLSearchParams();
+    body.set('csrf_token', CSRF);
+    body.set('data', JSON.stringify(settings));
+
     const r = await fetch(`${API}&action=settings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
     });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error);
+    const text = await r.text();
+    if (!r.ok) {
+      throw new Error(`HTTP ${r.status}: ${text.slice(0, 80)}`);
+    }
+    let j;
+    try { j = JSON.parse(text); }
+    catch(e) { throw new Error('Server response not JSON: ' + text.slice(0, 80)); }
+    if (!j.ok) throw new Error(j.error || 'Save failed');
     toast('Settings saved', 'ok');
   } catch(e) {
     toast('Save failed: ' + e.message, 'error');
@@ -862,9 +934,13 @@ async function saveCurve(n) {
 // ---- Daemon control ----
 async function restartDaemon() {
   toast('Restarting daemon...', '');
+  const body = new URLSearchParams();
+  body.set('csrf_token', CSRF);
+  body.set('data', JSON.stringify({cmd:'restart'}));
   await fetch(`${API}&action=service`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({cmd:'restart'})
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: body.toString()
   });
   toast('Daemon restarted', 'ok');
 }
